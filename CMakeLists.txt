@@ -31,20 +31,21 @@ flex_target(CompilerFlagsLexer_impl compiler-flags.l
 include_directories(${CMAKE_SOURCE_DIR})
 
 add_executable(compiler-flags-lexer
-	COPYING
-	${FLEX_CompilerFlagsLexer_impl_OUTPUTS}
-	main.c
-	compiler-flags.h
+        compiler-flags.h
+        compiler-flags.l
+        COPYING
+        ${FLEX_CompilerFlagsLexer_impl_OUTPUTS}
+        main.c
 )
 
 enable_testing()
-macro(compiler_flags_lexer_test name input expected_regex)
-	add_test(NAME "${name}-${input}" COMMAND ./compiler-flags-lexer
-		"${input}")
-	set_tests_properties("${name}-${input}" PROPERTIES
-		PASS_REGULAR_EXPRESSION "^${expected_regex}\n$")
-endmacro(compiler_flags_lexer_test)
 
-# simple positive tests
-compiler_flags_lexer_test(define-simple --defines -DDEFINE  "DEFINE")
-compiler_flags_lexer_test(include-simple --includes -Iinclude "include")
+add_test(NAME "define-simple" COMMAND ./compiler-flags-lexer --defines
+	-DDEFINE)
+set_tests_properties("define-simple" PROPERTIES PASS_REGULAR_EXPRESSION
+	"^DEFINE\n$")
+
+add_test(NAME "include-simple" COMMAND ./compiler-flags-lexer --includes
+	-Iinclude)
+set_tests_properties("include-simple" PROPERTIES PASS_REGULAR_EXPRESSION
+	"^include\n$")
