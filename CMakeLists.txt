@@ -49,3 +49,8 @@ add_test(NAME "include-simple" COMMAND ./compiler-flags-lexer --includes
 	-Iinclude)
 set_tests_properties("include-simple" PROPERTIES PASS_REGULAR_EXPRESSION
 	"^include\n$")
+
+add_test(NAME "include-multi" COMMAND ./compiler-flags-lexer --includes
+        "-Iinclude -Ianotherone")
+set_tests_properties("include-multi" PROPERTIES PASS_REGULAR_EXPRESSION
+        "include\nanotherone\n")
