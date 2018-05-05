@@ -50,7 +50,12 @@ add_test(NAME "include-simple" COMMAND ./compiler-flags-lexer --includes
 set_tests_properties("include-simple" PROPERTIES PASS_REGULAR_EXPRESSION
 	"^include\n$")
 
+add_test(NAME "define-multi" COMMAND ./compiler-flags-lexer --defines
+        "-DDEFINE -DANOTHER_ONE")
+set_tests_properties("define-multi" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^DEFINE\nANOTHER_ONE\n$")
+
 add_test(NAME "include-multi" COMMAND ./compiler-flags-lexer --includes
         "-Iinclude -Ianotherone")
 set_tests_properties("include-multi" PROPERTIES PASS_REGULAR_EXPRESSION
-        "include\nanotherone\n")
+        "^include\nanotherone\n$")
