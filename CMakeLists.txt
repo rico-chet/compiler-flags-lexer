@@ -41,12 +41,12 @@ add_executable(compiler-flags-lexer
 enable_testing()
 
 add_test(NAME "define-simple" COMMAND ./compiler-flags-lexer --defines
-	-DDEFINE)
+        "-DDEFINE")
 set_tests_properties("define-simple" PROPERTIES PASS_REGULAR_EXPRESSION
 	"^DEFINE\n$")
 
 add_test(NAME "include-simple" COMMAND ./compiler-flags-lexer --includes
-	-Iinclude)
+        "-Iinclude")
 set_tests_properties("include-simple" PROPERTIES PASS_REGULAR_EXPRESSION
 	"^include\n$")
 
