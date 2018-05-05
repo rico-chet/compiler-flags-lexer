@@ -97,7 +97,7 @@ static bool append_to_buffer(const char* restrict const text,
 \' { BEGIN(single_quoted_string); }
 
 <flag>[[:blank:]]           { BEGIN(INITIAL); }
-<define>[a-zA-Z0-9]*        {
+<define>[a-zA-Z0-9_]*        {
     if (mode == mode_defines)
     {
         if (!append_to_buffer(yytext, yyleng, &result, &result_size))
@@ -107,7 +107,7 @@ static bool append_to_buffer(const char* restrict const text,
     }
     BEGIN(INITIAL);
 }
-<include>[a-zA-Z0-9]*       {
+<include>[a-zA-Z0-9_]*       {
     if (mode == mode_includes)
     {
         if (!append_to_buffer(yytext, yyleng, &result, &result_size))
