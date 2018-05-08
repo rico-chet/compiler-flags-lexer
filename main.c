@@ -29,38 +29,38 @@
 
 int main(const int argc, const char* const argv[])
 {
-    if (argc <= 2)
+	if (argc <= 2)
 		return 1;
 
-    const char* const compiler_line = argv[2];
-    size_t            result_size   = (size_t)strlen(compiler_line);
-    char* restrict const result     = calloc(1, result_size);
+	const char* const compiler_line = argv[2];
+	size_t            result_size   = (size_t)strlen(compiler_line);
+	char* restrict const result     = calloc(1, result_size);
 
 	if (strcmp(argv[1], "--defines") == 0)
-    {
-        if (!compiler_flags_defines(compiler_line, result, result_size))
-        {
-            free(result);
-            puts("bad");
-            return 1;
-        }
-    }
-    else if (strcmp(argv[1], "--includes") == 0)
-    {
-        if (!compiler_flags_includes(compiler_line, result, result_size))
-        {
-            free(result);
-            puts("bad");
-            return 1;
-        }
-    }
+	{
+		if (!compiler_flags_defines(compiler_line, result, result_size))
+		{
+			free(result);
+			puts("bad");
+			return 1;
+		}
+	}
+	else if (strcmp(argv[1], "--includes") == 0)
+	{
+		if (!compiler_flags_includes(compiler_line, result, result_size))
+		{
+			free(result);
+			puts("bad");
+			return 1;
+		}
+	}
 	else
-    {
-        free(result);
-        return 1;
-    }
+	{
+		free(result);
+		return 1;
+	}
 
-    printf("%s", result);
-    free(result);
-    return 0;
+	printf("%s", result);
+	free(result);
+	return 0;
 }

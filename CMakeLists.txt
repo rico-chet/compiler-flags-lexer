@@ -25,7 +25,7 @@ project(compiler-flags-lexer)
 
 find_package(FLEX)
 flex_target(CompilerFlagsLexer_impl compiler-flags.l
-	${CMAKE_CURRENT_BINARY_DIR}/compiler-flags.c)
+        ${CMAKE_CURRENT_BINARY_DIR}/compiler-flags.c)
 
 # compiler-flags-lexer.h is here
 include_directories(${CMAKE_SOURCE_DIR})
