@@ -59,3 +59,38 @@ add_test(NAME "include-multi" COMMAND ./compiler-flags-lexer --includes
         "-Iinclude -Ianotherone")
 set_tests_properties("include-multi" PROPERTIES PASS_REGULAR_EXPRESSION
         "^include\nanotherone\n$")
+
+add_test(NAME "include-quotes-double" COMMAND ./compiler-flags-lexer --includes
+        "-I\"include this\"")
+set_tests_properties("include-quotes-double" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^include this\n$")
+
+add_test(NAME "include-quotes-double-with-embeds" COMMAND ./compiler-flags-lexer --includes
+        "-I\"include \\\"this\"")
+set_tests_properties("include-quotes-double-with-embeds" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^include \\\"this\n$")
+
+add_test(NAME "include-quotes-single" COMMAND ./compiler-flags-lexer --includes
+        "-I'include this'")
+set_tests_properties("include-quotes-single" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^include this\n$")
+
+add_test(NAME "include-quotes-single-with-embeds" COMMAND ./compiler-flags-lexer --includes
+        "-I'include \\'this'")
+set_tests_properties("include-quotes-single-with-embeds" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^include \\'this\n$")
+
+add_test(NAME "define-simple-with-input" COMMAND ./compiler-flags-lexer --defines
+        "-DDEFINE some_input_file")
+set_tests_properties("define-simple-with-input" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^DEFINE\n$")
+
+add_test(NAME "define-simple-with-std-input" COMMAND ./compiler-flags-lexer --defines
+        "-DDEFINE - some_input_file")
+set_tests_properties("define-simple-with-std-input" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^DEFINE\n$")
+
+add_test(NAME "define-simple-with-input-sep" COMMAND ./compiler-flags-lexer --defines
+        "-DDEFINE -- some_input_file")
+set_tests_properties("define-simple-with-input-sep" PROPERTIES PASS_REGULAR_EXPRESSION
+        "^DEFINE\n$")
