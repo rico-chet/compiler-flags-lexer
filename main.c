@@ -27,6 +27,8 @@
 
 #include "compiler-flags.h"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 int main(const int argc, const char* const argv[])
 {
 	if (argc <= 2)
@@ -36,13 +38,36 @@ int main(const int argc, const char* const argv[])
 	const size_t      result_size   = (size_t)strlen(compiler_line);
 	char* restrict const result     = calloc(1, result_size);
 
-	if (strcmp(argv[1], "--defines") == 0)
+	const char param_defines[]  = "--defines";
+	if (strncmp(argv[1], param_defines, ARRAY_SIZE(param_defines) - 1) == 0)
 	{
 		if (!compiler_flags_defines(compiler_line, result, result_size))
 		{
 			free(result);
 			puts("bad");
 			return 1;
+		}
+		const size_t size_of_mode_param = strlen(argv[1]);
+		if (ARRAY_SIZE(param_defines) - 1 + ARRAY_SIZE("-r.") - 1
+		        <= size_of_mode_param
+		    && strncmp(&(argv[1][ARRAY_SIZE(param_defines) - 1]),
+		               "-r",
+		               ARRAY_SIZE("-r") - 1)
+		           == 0)
+		{
+			// reentrant mode
+			const int in_reentrance_count = atoi(
+			    &(argv[1][ARRAY_SIZE(param_defines) - 1 + ARRAY_SIZE("-r") - 1]));
+			for (int i = 0; i < in_reentrance_count - 1; i++)
+			{
+				printf("%s", result);
+				if (!compiler_flags_defines(compiler_line, result, result_size))
+				{
+					free(result);
+					puts("bad");
+					return 1;
+				}
+			}
 		}
 	}
 	else if (strcmp(argv[1], "--includes") == 0)
