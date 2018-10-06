@@ -38,6 +38,10 @@ add_executable(compiler-flags-lexer
         main.c
 )
 
+# test coverage
+add_definitions(--coverage)
+target_link_libraries(compiler-flags-lexer gcov)
+
 enable_testing()
 
 add_test(NAME "define-simple" COMMAND ./compiler-flags-lexer --defines
