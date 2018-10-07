@@ -59,6 +59,11 @@ add_test(NAME "define-reentrant" COMMAND ./compiler-flags-lexer --defines-r2
 set_tests_properties("define-reentrant" PROPERTIES PASS_REGULAR_EXPRESSION
 	"^DEFINE\nDEFINE\n$")
 
+add_test(NAME "include-reentrant" COMMAND ./compiler-flags-lexer --includes-r2
+        "-Iinclude")
+set_tests_properties("include-reentrant" PROPERTIES PASS_REGULAR_EXPRESSION
+	"^include\ninclude\n$")
+
 add_test(NAME "define-multi" COMMAND ./compiler-flags-lexer --defines
         "-DDEFINE -DANOTHER_ONE")
 set_tests_properties("define-multi" PROPERTIES PASS_REGULAR_EXPRESSION
