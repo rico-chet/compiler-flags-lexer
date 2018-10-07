@@ -33,7 +33,7 @@ int main(const int argc, const char* const argv[])
 		return 1;
 
 	const char* const compiler_line = argv[2];
-	size_t            result_size   = (size_t)strlen(compiler_line);
+	const size_t      result_size   = (size_t)strlen(compiler_line);
 	char* restrict const result     = calloc(1, result_size);
 
 	if (strcmp(argv[1], "--defines") == 0)
