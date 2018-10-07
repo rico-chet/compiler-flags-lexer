@@ -36,12 +36,28 @@ enum mode_t
 	mode_count
 };
 
-#define YY_DECL \
-	bool yylex(enum mode_t mode, char* restrict result, size_t result_size)
+/* `struct yyguts_t* yyg` is a local vatiable in yylex() and
+ * it holds the entire state of the reentrant scanner.
+ * Its opaque name is `yyscan_t yyscanner`.
+*/
+struct yyguts_t;
+
+/* the `yyextra_r` field in `struct yyguts_t` */
+struct compiler_flags_extra_t
+{
+	char* restrict result;
+	size_t         result_size;
+	enum mode_t    mode;
+};
+
+#define YY_DECL bool yylex(yyscan_t yyscanner)
 
 #define yyterminate() return false
 
 }
+
+%option extra-type="struct compiler_flags_extra_t *"
+%option reentrant
 
 %{
 
@@ -49,10 +65,12 @@ enum mode_t
 const static bool g_trace = false;
 
 // function declarations
-static void begin(int start_condition);
-static void pop_state();
-static void print_start_condition_state(void);
-static void push_state(int new_state);
+static bool yylex(yyscan_t yyscanner);
+
+static void begin(int start_condition, struct yyguts_t* yyg);
+static void pop_state(struct yyguts_t* yyg);
+static void print_start_condition_state(struct yyguts_t* yyg);
+static void push_state(int new_state, struct yyguts_t* yyg);
 static const char* start_condition_name(int start_condition);
 
 // function definitions
@@ -111,32 +129,40 @@ static bool append_to_buffer(const char* restrict const text,
 
 %}
 
-- { push_state(flag); }
+- { push_state(flag, yyg); }
 <flag>{
-	D { pop_state(); push_state(define_name); }
-	I { pop_state(); push_state(include); }
-	[[:blank:]] { /* stdin as input */ pop_state(); }
-	-[[:blank:]] { pop_state(); push_state(input_files_only); }
-	. { pop_state(); /* skip over other flags*/ push_state(etc_flag); }
+	D { pop_state(yyg); push_state(define_name, yyg); }
+	I { pop_state(yyg); push_state(include, yyg); }
+	[[:blank:]] { /* stdin as input */ pop_state(yyg); }
+	-[[:blank:]] {
+		pop_state(yyg);
+		push_state(input_files_only, yyg);
+	}
+	. {
+		pop_state(yyg);
+		/* skip over other flags*/
+		push_state(etc_flag, yyg);
+	}
 }
 
 <define_value,include,etc_flag,input_files_only,INITIAL>{
 	['"] {
-	if (YY_START == INITIAL || YY_START == input_files_only)
-	{
-		push_state(input_file_);
-	}
-		push_state(yytext[0] == '"' ? double_quoted_string : single_quoted_string);
+		if (YY_START == INITIAL || YY_START == input_files_only)
+		{
+			push_state(input_file_, yyg);
+		}
+		push_state(yytext[0] == '"' ? double_quoted_string : single_quoted_string,
+		           yyg);
 	}
 }
 
 [^'"[:blank:]-] {
-	push_state(input_file_);
+	push_state(input_file_, yyg);
 	yymore();
 }
 
 <input_files_only>[^'"] {
-	push_state(input_file_);
+	push_state(input_file_, yyg);
 	yymore();
 }
 
@@ -144,49 +170,53 @@ static bool append_to_buffer(const char* restrict const text,
 
 <define_name>{
 	[[:alpha:]_][[:alnum:]_]* {
-		if (mode == mode_defines)
+		if (yyextra->mode == mode_defines)
 		{
-			if (!append_to_buffer(yytext, yyleng, &result, &result_size))
+			if (!append_to_buffer(yytext, yyleng, &yyextra->result,
+			                      &yyextra->result_size))
 				yyterminate();
-			if (!append_to_buffer("\n", 1, &result, &result_size))
+			if (!append_to_buffer("\n", 1, &yyextra->result, &yyextra->result_size))
 				yyterminate();
 		}
 	}
-	= { pop_state(); push_state(define_value); }
-	[ ] { pop_state(); }
+	= { pop_state(yyg); push_state(define_value, yyg); }
+	[ ] { pop_state(yyg); }
 }
 
 <include>[^[:blank:]'"]+ {
-	if (mode == mode_includes)
+	if (yyextra->mode == mode_includes)
 	{
-		if (!append_to_buffer(yytext, yyleng, &result, &result_size))
+		if (!append_to_buffer(yytext, yyleng, &yyextra->result,
+		                      &yyextra->result_size))
 			yyterminate();
-		if (!append_to_buffer("\n", 1, &result, &result_size))
+		if (!append_to_buffer("\n", 1, &yyextra->result, &yyextra->result_size))
 			yyterminate();
 	}
-	pop_state();
+	pop_state(yyg);
 }
 
 <double_quoted_string>{
 	\\\" {
-		if (yy_top_state() == define_value && mode == mode_defines
-		    || yy_top_state() == include && mode == mode_includes)
+		if (yy_top_state(yyg) == define_value && yyextra->mode == mode_defines
+		    || yy_top_state(yyg) == include && yyextra->mode == mode_includes)
 		{
-			if (!append_to_buffer(yytext, yyleng - 2, &result, &result_size))
+			if (!append_to_buffer(yytext, yyleng - 2, &yyextra->result,
+			                      &yyextra->result_size))
 				yyterminate();
-			if (!append_to_buffer("\"", 1, &result, &result_size))
+			if (!append_to_buffer("\"", 1, &yyextra->result, &yyextra->result_size))
 				yyterminate();
 		}
 	}
 
 	\" {
-		pop_state();
-		if (YY_START == define_value && mode == mode_defines
-		    || YY_START == include && mode == mode_includes)
+		pop_state(yyg);
+		if (YY_START == define_value && yyextra->mode == mode_defines
+		    || YY_START == include && yyextra->mode == mode_includes)
 		{
-			if (!append_to_buffer(yytext, yyleng - 1, &result, &result_size))
+			if (!append_to_buffer(yytext, yyleng - 1, &yyextra->result,
+			                      &yyextra->result_size))
 				yyterminate();
-			if (!append_to_buffer("\n", 1, &result, &result_size))
+			if (!append_to_buffer("\n", 1, &yyextra->result, &yyextra->result_size))
 				yyterminate();
 		}
 		else if (YY_START == etc_flag || YY_START == input_file_)
@@ -197,7 +227,7 @@ static bool append_to_buffer(const char* restrict const text,
 		{
 			yyterminate();
 		}
-		pop_state();
+		pop_state(yyg);
 	}
 
 	. { yymore(); }
@@ -205,30 +235,33 @@ static bool append_to_buffer(const char* restrict const text,
 
 <single_quoted_string>{
 	\\\' {
-		if (yy_top_state() == define_value && mode == mode_defines
-		    || yy_top_state() == include && mode == mode_includes)
+		if (yy_top_state(yyg) == define_value && yyextra->mode == mode_defines
+		    || yy_top_state(yyg) == include && yyextra->mode == mode_includes)
 		{
-			if (!append_to_buffer(yytext, yyleng - 2, &result, &result_size))
+			if (!append_to_buffer(yytext, yyleng - 2, &yyextra->result,
+			                      &yyextra->result_size))
 				yyterminate();
-			if (!append_to_buffer("'", 1, &result, &result_size))
+			if (!append_to_buffer("'", 1, &yyextra->result, &yyextra->result_size))
 				yyterminate();
 		}
 	}
 
 	\' {
-		pop_state();
-		if (YY_START == define_value && mode == mode_defines)
+		pop_state(yyg);
+		if (YY_START == define_value && yyextra->mode == mode_defines)
 		{
-			if (!append_to_buffer(yytext, yyleng - 1, &result, &result_size))
+			if (!append_to_buffer(yytext, yyleng - 1, &yyextra->result,
+			                      &yyextra->result_size))
 				yyterminate();
-			if (!append_to_buffer("\n", 1, &result, &result_size))
+			if (!append_to_buffer("\n", 1, &yyextra->result, &yyextra->result_size))
 				yyterminate();
 		}
-		else if (YY_START == include && mode == mode_includes)
+		else if (YY_START == include && yyextra->mode == mode_includes)
 		{
-			if (!append_to_buffer(yytext, yyleng - 1, &result, &result_size))
+			if (!append_to_buffer(yytext, yyleng - 1, &yyextra->result,
+			                      &yyextra->result_size))
 				yyterminate();
-			if (!append_to_buffer("\n", 1, &result, &result_size))
+			if (!append_to_buffer("\n", 1, &yyextra->result, &yyextra->result_size))
 				yyterminate();
 		}
 		else if (YY_START == etc_flag || YY_START == input_file_)
@@ -239,7 +272,7 @@ static bool append_to_buffer(const char* restrict const text,
 		{
 			yyterminate();
 		}
-		pop_state();
+		pop_state(yyg);
 	}
 
 	. { yymore(); }
@@ -250,7 +283,7 @@ static bool append_to_buffer(const char* restrict const text,
 %%
 
 #undef yywrap
-int yywrap()
+int yywrap(yyscan_t scanner)
 {
 	return 1;
 }
@@ -262,9 +295,20 @@ bool compiler_flags_defines(const char* restrict const text,
 	if (!(text && result && 0 < result_size))
 		return false;
 
-	YY_BUFFER_STATE buffer = yy_scan_string(text);
-	const bool      good   = yylex(mode_defines, result, result_size);
-	yy_delete_buffer(buffer);
+	struct compiler_flags_extra_t extra;
+	extra.mode        = mode_defines;
+	extra.result      = result;
+	extra.result_size = result_size;
+
+	yyscan_t scanner;
+	if (yylex_init_extra(&extra, &scanner) != 0)
+		return false;
+
+	YY_BUFFER_STATE buffer = yy_scan_string(text, scanner);
+	const bool      good   = yylex(scanner);
+	yy_delete_buffer(buffer, scanner);
+	if (yylex_destroy(scanner) != 0)
+		return false;
 
 	return good;
 }
@@ -276,14 +320,25 @@ bool compiler_flags_includes(const char* restrict const text,
 	if (!(text && result && 0 < result_size))
 		return false;
 
-	YY_BUFFER_STATE buffer = yy_scan_string(text);
-	const bool      good   = yylex(mode_includes, result, result_size);
-	yy_delete_buffer(buffer);
+	struct compiler_flags_extra_t extra;
+	extra.mode        = mode_includes;
+	extra.result      = result;
+	extra.result_size = result_size;
+
+	yyscan_t scanner;
+	if (yylex_init_extra(&extra, &scanner) != 0)
+		return false;
+
+	YY_BUFFER_STATE buffer = yy_scan_string(text, scanner);
+	const bool      good   = yylex(scanner);
+	yy_delete_buffer(buffer, scanner);
+	if (yylex_destroy(scanner) != 0)
+		return false;
 
 	return good;
 }
 
-static void begin(const int new_start_condition)
+static void begin(const int new_start_condition, struct yyguts_t* const yyg)
 {
 	if (g_trace)
 	{
@@ -291,46 +346,46 @@ static void begin(const int new_start_condition)
 		        "%s: %s\n",
 		        __func__,
 		        start_condition_name(new_start_condition));
-		print_start_condition_state();
+		print_start_condition_state(yyg);
 	}
 
 	BEGIN(new_start_condition);
 
 	if (g_trace)
 	{
-		print_start_condition_state();
+		print_start_condition_state(yyg);
 	}
 }
 
-static void push_state(const int new_state)
+static void push_state(const int new_state, struct yyguts_t* const yyg)
 {
 	if (g_trace)
 	{
 		fprintf(stderr, "%s: %s\n", __func__, start_condition_name(new_state));
-		print_start_condition_state();
+		print_start_condition_state(yyg);
 	}
-	yy_push_state(new_state);
+	yy_push_state(new_state, yyg);
 
 	if (g_trace)
 
 	{
-		print_start_condition_state();
+		print_start_condition_state(yyg);
 	}
 }
 
-static void pop_state()
+static void pop_state(struct yyguts_t* const yyg)
 {
 	if (g_trace)
 	{
 		fprintf(stderr, "%s\n", __func__);
-		print_start_condition_state();
+		print_start_condition_state(yyg);
 	}
 
-	yy_pop_state();
+	yy_pop_state(yyg);
 
 	if (g_trace)
 	{
-		print_start_condition_state();
+		print_start_condition_state(yyg);
 	}
 }
 
@@ -360,14 +415,15 @@ static const char* start_condition_name(const int start_condition)
 	}
 }
 
-static void print_start_condition_state(void)
+static void print_start_condition_state(struct yyguts_t* const yyg)
 {
-	fprintf(stderr, "%s\n", start_condition_name(YY_START));
-	if (yy_start_stack && yy_start_stack_ptr > 0)
+	if (yyextra && yyg->yy_start_stack && yyg->yy_start_stack_ptr > 0)
 	{
-		for (int i = yy_start_stack_ptr; i --> 0;)
+		fprintf(stderr, "%s\n", start_condition_name(YY_START));
+
+		for (int i = yyg->yy_start_stack_ptr; i-- > 0;)
 		{
-			fprintf(stderr, "\t%s\n", start_condition_name(yy_start_stack[i]));
+			fprintf(stderr, "\t%s\n", start_condition_name(yyg->yy_start_stack[i]));
 		}
 	}
 }
